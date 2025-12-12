@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block title %}Document Viewer - Loading{% endblock %}
+
+{% block extra_styles %}
+body {
+    background: #525659;
+}
+.container {
+    background: #323639;
+    border-radius: 8px;
+    max-width: 600px;
+    padding: 30px;
+}
+h1 {
+    color: white;
+    font-size: 18px;
+}
+p {
+    color: #aaa;
+}
+.document-preview {
+    background: white;
+    border-radius: 4px;
+    height: 200px;
+    margin: 24px 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+}
+.document-preview::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg, transparent, rgba(0,0,0,0.05), transparent);
+    animation: shimmer 1.5s infinite;
+}
+@keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+.spinner {
+    border-color: #666;
+    border-top-color: #333;
+}
+.loading-text {
+    font-size: 14px;
+    color: #888;
+}
+.toolbar {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin-top: 20px;
+}
+.toolbar-btn {
+    padding: 8px 16px;
+    background: #444;
+    color: #aaa;
+    border: none;
+    border-radius: 4px;
+    font-size: 13px;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Document Viewer</h1>
+    <p>Loading secure document...</p>
+
+    <div class="document-preview">
+        <div style="text-align: center;">
+            <div class="spinner"></div>
+            <p class="loading-text" style="margin-top: 10px;">Decrypting content...</p>
+        </div>
+    </div>
+
+    <div class="toolbar">
+        <button class="toolbar-btn" disabled>Download</button>
+        <button class="toolbar-btn" disabled>Print</button>
+        <button class="toolbar-btn" disabled>Share</button>
+    </div>
+</div>
+{% endblock %}
