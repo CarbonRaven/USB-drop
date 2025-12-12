@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}System Maintenance{% endblock %}
+
+{% block extra_styles %}
+body {
+    background: #fef3cd;
+}
+.container {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+}
+.icon {
+    width: 80px;
+    height: 80px;
+    background: #fff3cd;
+    border-radius: 50%;
+    margin: 0 auto 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.icon svg {
+    width: 40px;
+    height: 40px;
+    fill: #856404;
+}
+h1 {
+    color: #856404;
+}
+.progress-bar {
+    width: 100%;
+    height: 8px;
+    background: #e9ecef;
+    border-radius: 4px;
+    overflow: hidden;
+    margin: 24px 0;
+}
+.progress-fill {
+    height: 100%;
+    background: #ffc107;
+    border-radius: 4px;
+    animation: progress 2s ease-in-out infinite;
+}
+@keyframes progress {
+    0% { width: 0%; }
+    50% { width: 70%; }
+    100% { width: 100%; }
+}
+.eta {
+    font-size: 14px;
+    color: #666;
+    margin-top: 16px;
+}
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="icon">
+        <svg viewBox="0 0 24 24"><path d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 1.6 4.7C.4 7.1.9 10.1 2.9 12.1c1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1c.4.4 1 .4 1.4 0l2.3-2.3c.5-.4.5-1.1.1-1.4z"/></svg>
+    </div>
+    <h1>Scheduled Maintenance</h1>
+    <p>We're performing system updates to improve your experience. You'll be redirected shortly.</p>
+    <div class="progress-bar">
+        <div class="progress-fill"></div>
+    </div>
+    <p class="eta">Estimated time remaining: {{ redirect_delay }} seconds</p>
+</div>
+{% endblock %}
