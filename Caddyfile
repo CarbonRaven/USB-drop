@@ -1,0 +1,84 @@
+# =============================================================================
+# USB Drop Campaign Management System - Caddy Configuration
+# =============================================================================
+
+# Global options
+{
+    email admin@{$APP_DOMAIN}
+    # Uncomment for staging certificates during testing
+    # acme_ca https://acme-staging-v02.api.letsencrypt.org/directory
+}
+
+# =============================================================================
+# CanaryTokens Server (subproject55.com)
+# =============================================================================
+
+# Main CanaryTokens interface
+tokens.{$CANARY_DOMAIN} {
+    reverse_proxy canarytokens-frontend:8082
+}
+
+# Root domain for token callbacks
+{$CANARY_DOMAIN} {
+    reverse_proxy canarytokens-frontend:8082
+}
+
+# Wildcard for token subdomains
+*.{$CANARY_DOMAIN} {
+    reverse_proxy canarytokens-frontend:8082
+}
+
+# =============================================================================
+# Campaign Manager (becomeaninternetghost.com)
+# =============================================================================
+
+# API
+api.{$APP_DOMAIN} {
+    # CORS headers
+    header Access-Control-Allow-Origin "https://app.{$APP_DOMAIN}"
+    header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+    header Access-Control-Allow-Headers "Content-Type, Authorization"
+
+    # Handle preflight requests
+    @options method OPTIONS
+    respond @options 204
+
+    reverse_proxy api:8000
+}
+
+# Frontend Application
+app.{$APP_DOMAIN} {
+    reverse_proxy campaign-frontend:80
+
+    # Security headers
+    header {
+        X-Frame-Options "SAMEORIGIN"
+        X-Content-Type-Options "nosniff"
+        X-XSS-Protection "1; mode=block"
+        Referrer-Policy "strict-origin-when-cross-origin"
+    }
+}
+
+# RickRoll Landing Page
+rick.{$APP_DOMAIN} {
+    reverse_proxy rickroll:5000
+}
+
+# Root domain redirect to app
+{$APP_DOMAIN} {
+    redir https://app.{$APP_DOMAIN}{uri} permanent
+}
+
+www.{$APP_DOMAIN} {
+    redir https://app.{$APP_DOMAIN}{uri} permanent
+}
+
+# =============================================================================
+# Custom Landing Pages (wildcard)
+# Can be configured to point to different containers/URLs
+# =============================================================================
+
+# Catch-all for other subdomains - redirect to RickRoll
+*.{$APP_DOMAIN} {
+    reverse_proxy rickroll:5000
+}

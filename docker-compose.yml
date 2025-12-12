@@ -1,0 +1,136 @@
+version: '3.8'
+
+services:
+  # =============================================================================
+  # Reverse Proxy - Caddy (automatic HTTPS)
+  # =============================================================================
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"  # HTTP/3
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - frontend
+      - canarytokens
+    depends_on:
+      - api
+      - campaign-frontend
+      - rickroll
+
+  # =============================================================================
+  # PostgreSQL Database
+  # =============================================================================
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: usbdrop
+      POSTGRES_USER: usbdrop
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U usbdrop"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # =============================================================================
+  # Campaign API (FastAPI)
+  # =============================================================================
+  api:
+    build:
+      context: ./campaign-api
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      - DATABASE_URL=postgresql://usbdrop:${DB_PASSWORD}@postgres:5432/usbdrop
+      - CANARY_SERVER=http://canarytokens-frontend:8082
+      - CANARY_DOMAIN=${CANARY_DOMAIN}
+      - FACTORY_AUTH=${FACTORY_AUTH}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - JWT_ALGORITHM=${JWT_ALGORITHM:-HS256}
+      - JWT_ACCESS_TOKEN_EXPIRE_MINUTES=${JWT_ACCESS_TOKEN_EXPIRE_MINUTES:-15}
+      - JWT_REFRESH_TOKEN_EXPIRE_DAYS=${JWT_REFRESH_TOKEN_EXPIRE_DAYS:-7}
+      - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
+      - ADMIN_EMAIL=${ADMIN_EMAIL}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+    volumes:
+      - ./campaign-api:/app
+      - api_uploads:/app/uploads
+    networks:
+      - frontend
+      - backend
+      - canarytokens
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # =============================================================================
+  # Campaign Frontend (Vue 3)
+  # =============================================================================
+  campaign-frontend:
+    build:
+      context: ./campaign-frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    networks:
+      - frontend
+    depends_on:
+      - api
+
+  # =============================================================================
+  # RickRoll Landing Page
+  # =============================================================================
+  rickroll:
+    build:
+      context: ./landing-pages/rickroll
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      - DEFAULT_REDIRECT_URL=https://www.youtube.com/watch?v=dQw4w9WgXcQ
+    networks:
+      - frontend
+
+  # =============================================================================
+  # Redis (for CanaryTokens)
+  # =============================================================================
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    networks:
+      - canarytokens
+    command: redis-server --appendonly yes
+
+# =============================================================================
+# Networks
+# =============================================================================
+networks:
+  frontend:
+    driver: bridge
+  backend:
+    driver: bridge
+  canarytokens:
+    driver: bridge
+
+# =============================================================================
+# Volumes
+# =============================================================================
+volumes:
+  caddy_data:
+  caddy_config:
+  postgres_data:
+  redis_data:
+  api_uploads:

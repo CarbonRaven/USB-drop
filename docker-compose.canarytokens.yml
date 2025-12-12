@@ -1,0 +1,76 @@
+version: '3.8'
+
+# CanaryTokens Docker Stack
+# This extends the main docker-compose.yml
+# Run with: docker compose -f docker-compose.yml -f docker-compose.canarytokens.yml up -d
+
+services:
+  # =============================================================================
+  # CanaryTokens Frontend
+  # =============================================================================
+  canarytokens-frontend:
+    image: thinkst/canarytokens
+    restart: unless-stopped
+    environment:
+      - CANARY_PUBLIC_IP=${VPS_IP}
+      - CANARY_DOMAINS=${CANARY_DOMAIN}
+      - CANARY_NXDOMAINS=nx.${CANARY_DOMAIN}
+      - CANARY_WG_PRIVATE_KEY_SEED=${WG_PRIVATE_KEY_SEED}
+      - CANARY_GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - LOG_FILE=/logs/frontend.log
+    volumes:
+      - canarytokens_logs:/logs
+    networks:
+      - canarytokens
+    depends_on:
+      - redis
+
+  # =============================================================================
+  # CanaryTokens Switchboard (Alert Processing)
+  # =============================================================================
+  canarytokens-switchboard:
+    image: thinkst/canarytokens
+    restart: unless-stopped
+    command: switchboard
+    ports:
+      - "53:53/tcp"
+      - "53:53/udp"
+      - "25:25/tcp"
+      - "6443:6443/tcp"    # Kubernetes API
+      - "51820:51820/udp"  # WireGuard
+    environment:
+      # Domain Configuration
+      - CANARY_PUBLIC_DOMAIN=${CANARY_DOMAIN}
+      - CANARY_PUBLIC_IP=${VPS_IP}
+      - CANARY_WG_PRIVATE_KEY_SEED=${WG_PRIVATE_KEY_SEED}
+
+      # Factory Auth (for API access)
+      - FACTORY_AUTH=${FACTORY_AUTH}
+
+      # Webhook for Alerts (sends to our Campaign API)
+      - CANARY_WEBHOOK_URL=https://api.${APP_DOMAIN}/api/webhooks/canary
+
+      # Email Configuration (Mailgun)
+      - CANARY_MAILGUN_API_KEY=${MAILGUN_API_KEY}
+      - CANARY_MAILGUN_DOMAIN_NAME=${MAILGUN_DOMAIN}
+      - CANARY_MAILGUN_BASE_URL=${MAILGUN_BASE_URL:-https://api.mailgun.net}
+      - CANARY_ALERT_EMAIL_FROM_ADDRESS=alerts@${CANARY_DOMAIN}
+      - CANARY_ALERT_EMAIL_FROM_DISPLAY=CanaryTokens Alert
+      - CANARY_ALERT_EMAIL_SUBJECT=CanaryToken Triggered
+
+      # Logging
+      - LOG_FILE=/logs/switchboard.log
+    volumes:
+      - canarytokens_logs:/logs
+    networks:
+      - canarytokens
+    depends_on:
+      - redis
+
+volumes:
+  canarytokens_logs:
+
+networks:
+  canarytokens:
+    external: true
+    name: project-files_canarytokens
